@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import path
@@ -13,6 +12,7 @@ def _isinside(point, polygon, tolerance=0):
     else:
         raise ValueError("wrong function input")
 
+
 def _areinside(points, polygon, tolerance=0):
     if isinstance(polygon, list) or isinstance(polygon, np.ndarray):
         poly = path.Path(polygon)
@@ -26,8 +26,8 @@ def _points_inside(outer_boundary, trimming_boundaries, mesh_size):
     xmax, ymax = np.amax(outer_boundary, axis=0)
     dx = abs(xmax - xmin)
     dy = abs(ymax - ymin)
-    x = np.linspace(xmin, xmax, dx/mesh_size+1)
-    y = np.linspace(ymin, ymax, dy/mesh_size+1)
+    x = np.linspace(xmin, xmax, dx / mesh_size + 1)
+    y = np.linspace(ymin, ymax, dy / mesh_size + 1)
     X, Y = np.meshgrid(x, y)
     grid = np.column_stack((X.flatten(), Y.flatten()))
     indices = _areinside(grid, outer_boundary, mesh_size)
@@ -77,11 +77,11 @@ def plot(outer_boundary, points, triangulation_indices, trimming_boundaries=None
     axes = fig.add_subplot(111)
     outer_boundary.append(outer_boundary[0])
     npouter_boundary = np.array(outer_boundary)
-    axes.plot(npouter_boundary[:,0], npouter_boundary[:,1], lw=2, color="black")
+    axes.plot(npouter_boundary[:, 0], npouter_boundary[:, 1], lw=2, color="black")
     if trimming_boundaries is not None and plot_trim:
         for bound in trimming_boundaries:
             bound.append(bound[0])
             npbound = np.array(bound)
-            axes.plot(npbound[:,0], npbound[:,1], lw=2, color="red")
+            axes.plot(npbound[:, 0], npbound[:, 1], lw=2, color="red")
     axes.triplot(points[:, 0], points[:, 1], triangulation_indices)
     plt.show()
