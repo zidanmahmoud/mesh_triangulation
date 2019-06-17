@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 from PyQt5 import QtGui, QtWidgets, QtCore
 
@@ -7,68 +6,105 @@ from matplotlib.figure import Figure
 
 from delauny_mesh import triangulate
 
-class Window(QtWidgets.QDialog):
-    def __init__(self, parent=None):
-        super(Window, self).__init__(parent)
+
+class Window(QtWidgets.QWidget):
+    def __init__(self):
+        super(Window, self).__init__()
 
         figure = Figure()
-        self.ax = figure.add_subplot(111)
-        self.ax.grid()
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.cid = self.canvas.mpl_connect("button_press_event", self._on_press)
-        toolbar = NavigationToolbar2QT(self.canvas, self)
+        ax = figure.add_subplot(111)
+        canvas = FigureCanvasQTAgg(figure)
+        toolbar = NavigationToolbar2QT(canvas, self)
+        cid = canvas.mpl_connect("button_press_event", self._on_press)
+        ax.grid(True)
 
-        tri_button = QtWidgets.QPushButton('Triangulate')
+        tri_button = QtWidgets.QPushButton("Triangulate")
         tri_button.clicked.connect(self._triangulate_and_plot)
 
-        self.coords_button = QtWidgets.QPushButton('Enter a new point')
-        self.coords_button.clicked.connect(self._show_point_coords_dialog)
+        coords_button = QtWidgets.QPushButton("Enter a new point")
+        coords_button.clicked.connect(self._show_point_coords_dialog)
 
-        self.triangulated = False
-        self.tripoints = None
-        self.triindices = None
+        self.mesh_size_spinbox = QtWidgets.QDoubleSpinBox()
+        self.mesh_size_spinbox.setDecimals(5)
+        self.mesh_size_spinbox.setMinimum(0)
+        self.mesh_size_spinbox.setValue(1)
 
         # set the layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(toolbar)
-        layout.addWidget(self.canvas)
-        layout.addWidget(self.coords_button)
-        layout.addWidget(tri_button)
-        self.setLayout(layout)
+        main_layout = QtWidgets.QHBoxLayout()
 
-        self.points = list()
+        left_layout = QtWidgets.QVBoxLayout()
 
+        left_layout.addSpacerItem(QtWidgets.QSpacerItem(0, 100))
+        left_layout.addWidget(coords_button)
+        row_layout = QtWidgets.QHBoxLayout()
+        row_layout.addWidget(QtWidgets.QLabel("Mesh Size"))
+        row_layout.addWidget(self.mesh_size_spinbox)
+        row_widget = QtWidgets.QWidget()
+        row_widget.setLayout(row_layout)
+        left_layout.addWidget(row_widget)
+        left_layout.addWidget(tri_button)
+        left_layout.addStretch(1)
+
+        right_layout = QtWidgets.QVBoxLayout()
+        right_layout.addWidget(toolbar)
+        right_layout.addWidget(canvas)
+        
+        left_widget = QtWidgets.QWidget()
+        left_widget.setLayout(left_layout)
+        right_widget = QtWidgets.QWidget()
+        right_widget.setLayout(right_layout)
+
+        main_layout.addWidget(left_widget)
+        main_layout.addWidget(right_widget)
+
+        self.setLayout(main_layout)
+
+        # set some variables
+        self.variables = dict()
+        self.variables["canvas"] = canvas
+        self.variables["ax"] = ax
+        self.variables["cid"] = cid
+        self.variables["points"] = list()
+        self.variables["triangulated"] = False
+        self.variables["tripoints"] = None
+        self.variables["triindices"] = None
+
+        self.variables["points"] = list()
 
     def _on_press(self, event):
-        if not event.inaxes: return
+        if not event.inaxes:
+            return
         x, y = event.xdata, event.ydata
         if not event.dblclick and event.button == 1:
-            self.points.append([x, y])
+            self.variables["points"].append([x, y])
             self._replot()
-
 
     def _replot(self):
         # Clear the plot
-        self.ax.clear()
-        self.ax.grid()
+        self.variables["ax"].clear()
+        self.variables["ax"].grid()
 
         # Plot the selected points
-        p = np.array(self.points)
-        self.ax.scatter(p[:, 0], p[:, 1], color="red")
-        for i, point in enumerate(self.points):
-            self.ax.annotate(str(i), point)
-        
+        p = np.array(self.variables["points"])
+        self.variables["ax"].scatter(p[:, 0], p[:, 1], color="red")
+        for i, point in enumerate(self.variables["points"]):
+            self.variables["ax"].annotate(str(i), point)
+
         # Plot the triangulation
-        if self.triangulated:
-            self.ax.triplot(self.tripoints[:, 0], self.tripoints[:, 1], self.triindices)
+        if self.variables["triangulated"]:
+            self.variables["ax"].triplot(
+                self.variables["tripoints"][:, 0],
+                self.variables["tripoints"][:, 1],
+                self.variables["triindices"],
+            )
 
-        self.canvas.draw()
-
+        self.variables["canvas"].draw()
 
     def _show_point_coords_dialog(self):
-        self.dialog = QtWidgets.QDialog(self, QtCore.Qt.Tool |
-                                         QtCore.Qt.WindowMaximizeButtonHint |
-                                         QtCore.Qt.WindowCloseButtonHint)
+        # self.dialog = QtWidgets.QDialog(self, QtCore.Qt.Tool |
+        #                                  QtCore.Qt.WindowMaximizeButtonHint |
+        #                                  QtCore.Qt.WindowCloseButtonHint)
+        self.dialog = QtWidgets.QDialog()
         self.dialog.setWindowTitle("Point Coordinates")
         self.dialog.setModal(True)
 
@@ -76,95 +112,54 @@ class Window(QtWidgets.QDialog):
         layout.setContentsMargins(10, 10, 10, 10)
         self.dialog.setLayout(layout)
 
-        self.x_option = Option(0)
-        row_widget = QtWidgets.QWidget()
         row_layout = QtWidgets.QHBoxLayout()
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_widget.setLayout(row_layout)
-        layout.addWidget(row_widget)
-        prefix_widget = QtWidgets.QLabel("x coordinate")
-        row_layout.addWidget(prefix_widget)
+        row_layout.addWidget(QtWidgets.QLabel("x coordinate"))
         x_spinbox = QtWidgets.QDoubleSpinBox()
-        x_spinbox.setValue(0)
-        x_spinbox.setKeyboardTracking(False)
+        x_spinbox.setDecimals(5)
         row_layout.addWidget(x_spinbox, 1)
-        self.x_option.connect(x_spinbox.setValue)
-        x_spinbox.valueChanged.connect(self.x_option.change)
 
-        self.y_option = Option(0)
         row_widget = QtWidgets.QWidget()
-        row_layout = QtWidgets.QHBoxLayout()
-        row_layout.setContentsMargins(0, 0, 0, 0)
         row_widget.setLayout(row_layout)
         layout.addWidget(row_widget)
-        prefix_widget = QtWidgets.QLabel("y coordinate")
-        row_layout.addWidget(prefix_widget)
+
+        row_layout = QtWidgets.QHBoxLayout()
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(QtWidgets.QLabel("y coordinate"))
         y_spinbox = QtWidgets.QDoubleSpinBox()
-        y_spinbox.setValue(0)
-        y_spinbox.setKeyboardTracking(False)
+        y_spinbox.setDecimals(5)
         row_layout.addWidget(y_spinbox, 1)
-        self.y_option.connect(y_spinbox.setValue)
-        y_spinbox.valueChanged.connect(self.y_option.change)
+        
+        row_widget = QtWidgets.QWidget()
+        row_widget.setLayout(row_layout)
+        layout.addWidget(row_widget)
 
         ok_button = QtWidgets.QPushButton("Ok")
-        ok_button.clicked.connect(self._add_point)
+        ok_button.clicked.connect(lambda: self._add_point([x_spinbox.value(), y_spinbox.value()]))
         layout.addWidget(ok_button)
 
         self.dialog.exec_()
 
-    def _add_point(self):
-        point = [self.x_option.value, self.y_option.value]
-        self.points.append(point)
+    def _add_point(self, point):
+        self.variables["points"].append(point)
         self._replot()
         self.dialog.close()
 
     def _triangulate_and_plot(self):
-        if len(self.points) < 3:
+        if len(self.variables["points"]) < 3:
             QtWidgets.QMessageBox.critical(self, "Error", "Enter more points")
             return
-        self.canvas.mpl_disconnect(self.cid)
-        self.tripoints, self.triindices = triangulate(self.points, 0.1)
-        self.triangulated = True
+        self.variables["canvas"].mpl_disconnect(self.variables["cid"])
+        self.variables["tripoints"], self.variables["triindices"] = triangulate(self.variables["points"], self.mesh_size_spinbox.value())
+        self.variables["triangulated"] = True
         self._replot()
 
 
-
-class Option(QtCore.QObject):
-    _changed = QtCore.pyqtSignal(object)
-
-    def __init__(self, value, action=None):
-        super(Option, self).__init__()
-        self.value = value
-
-        if action:
-            self.connect(action)
-
-    def connect(self, action):
-        self._changed.connect(action)
-
-    def change(self, value):
-        self.value = value
-
-    def __call__(self):
-        return self.value
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = value
-        self.emit()
-
-    def emit(self):
-        self._changed.emit(self._value)
-
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+if __name__ == "__main__":
+    app = QtWidgets.QApplication([])
+    app.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
 
     main = Window()
     main.show()
 
-    sys.exit(app.exec_())
+    app.exec_()
