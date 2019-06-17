@@ -10,15 +10,16 @@ from delauny_mesh import triangulate
 class Window(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
-        self.figure = Figure()
-        self.ax = self.figure.add_subplot(111)
+
+        figure = Figure()
+        self.ax = figure.add_subplot(111)
         self.ax.grid()
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.cid = self.canvas.mpl_connect("button_press_event", self._on_press)
-        self.toolbar = NavigationToolbar2QT(self.canvas, self)
+        toolbar = NavigationToolbar2QT(self.canvas, self)
 
-        self.button = QtWidgets.QPushButton('Triangulate')
-        self.button.clicked.connect(self._triangulate_and_plot)
+        tri_button = QtWidgets.QPushButton('Triangulate')
+        tri_button.clicked.connect(self._triangulate_and_plot)
 
         self.coords_button = QtWidgets.QPushButton('Enter a new point')
         self.coords_button.clicked.connect(self._show_point_coords_dialog)
@@ -29,10 +30,10 @@ class Window(QtWidgets.QDialog):
 
         # set the layout
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(self.toolbar)
+        layout.addWidget(toolbar)
         layout.addWidget(self.canvas)
         layout.addWidget(self.coords_button)
-        layout.addWidget(self.button)
+        layout.addWidget(tri_button)
         self.setLayout(layout)
 
         self.points = list()
