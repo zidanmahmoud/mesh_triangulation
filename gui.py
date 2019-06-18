@@ -1,6 +1,8 @@
+"""
+GUI
+"""
 import numpy as np
-from PyQt5 import QtGui, QtWidgets, QtCore
-
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
@@ -8,18 +10,23 @@ from delauny_mesh import triangulate
 
 
 class Window(QtWidgets.QWidget):
+    """
+    Main Window
+    """
     def __init__(self):
         super(Window, self).__init__()
 
+        self.dialog = None
+
         figure = Figure()
-        ax = figure.add_subplot(111)
+        axes = figure.add_subplot(111)
         canvas = FigureCanvasQTAgg(figure)
         toolbar = NavigationToolbar2QT(canvas, self)
         cid = canvas.mpl_connect("button_press_event", self._on_press)
-        ax.grid(True)
+        axes.grid(True)
 
         tri_button = QtWidgets.QPushButton("Triangulate")
-        tri_button.clicked.connect(self._triangulate_and_plot)
+        tri_button.clicked.connect(self.triangulate_and_plot)
 
         coords_button = QtWidgets.QPushButton("Enter a new point")
         coords_button.clicked.connect(self._show_point_coords_dialog)
@@ -77,9 +84,12 @@ class Window(QtWidgets.QWidget):
         x, y = event.xdata, event.ydata
         if not event.dblclick and event.button == 1:
             self.variables["points"].append([x, y])
-            self._replot()
+            self.replot()
 
-    def _replot(self):
+    def replot(self):
+        """
+        refresh the plot
+        """
         # Clear the plot
         self.variables["ax"].clear()
         self.variables["ax"].grid()
@@ -101,9 +111,6 @@ class Window(QtWidgets.QWidget):
         self.variables["canvas"].draw()
 
     def _show_point_coords_dialog(self):
-        # self.dialog = QtWidgets.QDialog(self, QtCore.Qt.Tool |
-        #                                  QtCore.Qt.WindowMaximizeButtonHint |
-        #                                  QtCore.Qt.WindowCloseButtonHint)
         self.dialog = QtWidgets.QDialog()
         self.dialog.setWindowTitle("Point Coordinates")
         self.dialog.setModal(True)
@@ -135,24 +142,31 @@ class Window(QtWidgets.QWidget):
         layout.addWidget(row_widget)
 
         ok_button = QtWidgets.QPushButton("Ok")
-        ok_button.clicked.connect(lambda: self._add_point([x_spinbox.value(), y_spinbox.value()]))
+        ok_button.clicked.connect(lambda: self.add_point([x_spinbox.value(), y_spinbox.value()]))
         layout.addWidget(ok_button)
 
         self.dialog.exec_()
 
-    def _add_point(self, point):
+    def add_point(self, point):
+        """
+        add a point and refresh the plot.
+        used in the point coords dialog
+        """
         self.variables["points"].append(point)
-        self._replot()
+        self.replot()
         self.dialog.close()
 
-    def _triangulate_and_plot(self):
+    def triangulate_and_plot(self):
+        """
+        triangulate the points and refresh the plot
+        """
         if len(self.variables["points"]) < 3:
-            QtWidgets.QMessageBox.critical(self, "Error", "Enter more points")
+            QtWidgets.QMessageBox.critical(self, "Error", "Enter at least 3 points")
             return
         self.variables["canvas"].mpl_disconnect(self.variables["cid"])
         self.variables["tripoints"], self.variables["triindices"] = triangulate(self.variables["points"], self.mesh_size_spinbox.value())
         self.variables["triangulated"] = True
-        self._replot()
+        self.replot()
 
 
 if __name__ == "__main__":
