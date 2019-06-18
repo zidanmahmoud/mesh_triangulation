@@ -1,24 +1,26 @@
+"""
+Mesh functions
+"""
+
+from copy import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import path
 from scipy.spatial import qhull
-from copy import copy
 
 
 def _isinside(point, polygon, tolerance=0):
-    if isinstance(polygon, list) or isinstance(polygon, np.ndarray):
+    if isinstance(polygon, (list, np.ndarray)):
         poly = path.Path(polygon)
         return poly.contains_point(point, radius=tolerance)
-    else:
-        raise ValueError("wrong function input")
+    raise ValueError("wrong function input")
 
 
 def _areinside(points, polygon, tolerance=0):
-    if isinstance(polygon, list) or isinstance(polygon, np.ndarray):
+    if isinstance(polygon, (list, np.ndarray)):
         poly = path.Path(polygon)
         return poly.contains_points(points, radius=tolerance)
-    else:
-        raise ValueError("wrong function input")
+    raise ValueError("wrong function input")
 
 
 def _points_inside(outer_boundary, trimming_boundaries, mesh_size):
@@ -30,7 +32,9 @@ def _points_inside(outer_boundary, trimming_boundaries, mesh_size):
     y = np.linspace(ymin, ymax, dy / mesh_size + 1)
     X, Y = np.meshgrid(x, y)
     grid = np.column_stack((X.flatten(), Y.flatten()))
-    indices = _areinside(grid, outer_boundary, mesh_size)
+    indices = _areinside(
+        grid, outer_boundary, -mesh_size
+    )  # TODO: check the tolerance sign values...
     if trimming_boundaries is not None:
         for bound in trimming_boundaries:
             indices *= ~_areinside(grid, bound, -mesh_size) * ~_areinside(grid, bound, -mesh_size)
@@ -67,12 +71,27 @@ def _delauny_triangulate(outer_boundary, trimming_boundaries, inner_points, edge
 
 
 def triangulate(outer_boundary, mesh_size, trimming_boundaries=None):
+    """
+    triangulation function
+
+    Parameters
+    ----------
+    outer_boundary : array_like
+        nx2 list or np.ndarray
+    mesh_sizse : float
+        background grid size
+    trimming_boundaries : array_like
+        OPTIONAL, list of (nx2 list or np.ndarray)
+    """
     inner_points = _points_inside(outer_boundary, trimming_boundaries, mesh_size)
     edge_points = _edge_points(outer_boundary, trimming_boundaries, mesh_size)
     return _delauny_triangulate(outer_boundary, trimming_boundaries, inner_points, edge_points)
 
 
 def plot(outer_boundary, points, triangulation_indices, trimming_boundaries=None, plot_trim=True):
+    """
+    plot the triangulation
+    """
     fig = plt.figure()
     axes = fig.add_subplot(111)
     outer_boundary.append(outer_boundary[0])

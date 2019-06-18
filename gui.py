@@ -9,12 +9,21 @@ from matplotlib.figure import Figure
 from delauny_mesh import triangulate
 
 
-class Window(QtWidgets.QWidget):
+class Window(QtWidgets.QMainWindow):
     """
     Main Window
     """
+
     def __init__(self):
         super(Window, self).__init__()
+
+        central_widget = QtWidgets.QWidget()
+        self.setCentralWidget(central_widget)
+
+        menu = self.menuBar()
+        menu.addMenu("Help").addAction(
+            "To insert a point, either\nclick with left mouse on the\ncanvas or use 'Enter a new point'\n dialog."
+        )
 
         self.dialog = None
 
@@ -55,7 +64,7 @@ class Window(QtWidgets.QWidget):
         right_layout = QtWidgets.QVBoxLayout()
         right_layout.addWidget(toolbar)
         right_layout.addWidget(canvas)
-        
+
         left_widget = QtWidgets.QWidget()
         left_widget.setLayout(left_layout)
         right_widget = QtWidgets.QWidget()
@@ -64,12 +73,12 @@ class Window(QtWidgets.QWidget):
         main_layout.addWidget(left_widget)
         main_layout.addWidget(right_widget)
 
-        self.setLayout(main_layout)
+        central_widget.setLayout(main_layout)
 
         # set some variables
         self.variables = dict()
         self.variables["canvas"] = canvas
-        self.variables["ax"] = ax
+        self.variables["ax"] = axes
         self.variables["cid"] = cid
         self.variables["points"] = list()
         self.variables["triangulated"] = False
@@ -136,7 +145,7 @@ class Window(QtWidgets.QWidget):
         y_spinbox = QtWidgets.QDoubleSpinBox()
         y_spinbox.setDecimals(5)
         row_layout.addWidget(y_spinbox, 1)
-        
+
         row_widget = QtWidgets.QWidget()
         row_widget.setLayout(row_layout)
         layout.addWidget(row_widget)
@@ -154,7 +163,7 @@ class Window(QtWidgets.QWidget):
         """
         self.variables["points"].append(point)
         self.replot()
-        self.dialog.close()
+        # self.dialog.close()
 
     def triangulate_and_plot(self):
         """
@@ -164,16 +173,18 @@ class Window(QtWidgets.QWidget):
             QtWidgets.QMessageBox.critical(self, "Error", "Enter at least 3 points")
             return
         self.variables["canvas"].mpl_disconnect(self.variables["cid"])
-        self.variables["tripoints"], self.variables["triindices"] = triangulate(self.variables["points"], self.mesh_size_spinbox.value())
+        self.variables["tripoints"], self.variables["triindices"] = triangulate(
+            self.variables["points"], self.mesh_size_spinbox.value()
+        )
         self.variables["triangulated"] = True
         self.replot()
 
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    app.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
+    APP = QtWidgets.QApplication([])
+    APP.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
 
-    main = Window()
-    main.show()
+    MAIN = Window()
+    MAIN.show()
 
-    app.exec_()
+    APP.exec_()
